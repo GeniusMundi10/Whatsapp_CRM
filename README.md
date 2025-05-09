@@ -1,63 +1,140 @@
-<p align="center"><img src="./public/logo.png" alt="Logo" width="300" height="300"></p>
-<h1 align="center">WhatsApp 2.0</h1>
-<h4 align="center">A responsive and modern real-time whatsapp clone made with Next.js, Pusher, and Prisma.</h4>
+# WhatsApp Clone with CRM
 
-# Features
+A full-featured WhatsApp clone with integrated Customer Relationship Management (CRM) functionality.
 
-- [x] Authentication/Singup using github and google.
-- [x] Custom login and signup using nodemailer..
-- [x] Modern and responsive mobile friendly ui.
-- [x] Voice and video call integration using zegocloud.
-- [x] Realtime chat using pusher.
-- [x] Normal and group chats.
-- [x] Supports text and image and voice messages.
-- [x] Search indexing for messages, chats and contacts.
-- [x] Dark and light mode available.
-- [x] Real time event and message notifications.
-- [x] [Youtube Demo](https://youtu.be/xkknqfyUR-8)      
+![WhatsApp Clone with CRM](public/screenshot.png)
 
-# Demo
+## Features
 
-![Demo](./public/demo.gif)
+### Messaging Features
 
-# Setup
+- **Real-time Chat**: Instant messaging using Pusher for real-time communication
+- **File Sharing**: Send images, documents, and voice messages
+- **Voice & Video Calls**: Make voice and video calls using Zego WebRTC
+- **Group Chats**: Create and manage group conversations
+- **Message Search**: Search through message history
+- **Emojis & Reactions**: Express yourself with emojis and reactions
+- **Read Receipts**: Know when messages have been read
+- **Message Status**: See delivery and read status
+- **Typing Indicators**: Know when someone is typing
+- **Online Status**: See when contacts are online
 
+### CRM Features
+
+- **Contact Information**: Store and manage contact details
+- **Contact Tagging**: Categorize contacts with tags
+- **Follow-up Management**: Schedule and track follow-ups
+- **Message Templates**: Create and use templates for common messages
+- **Contact Notes**: Add notes to contacts for important information
+- **Activity Tracking**: Track interactions with contacts
+- **Priority Levels**: Assign priority to contacts
+- **Contact Status**: Categorize contacts as leads, customers, etc.
+- **Contact Source Tracking**: Track where contacts came from
+
+### Authentication & Security
+
+- **User Authentication**: Secure login with email/password
+- **OAuth Integration**: Sign in with Google and GitHub
+- **Email Verification**: Verify user emails for security
+- **Profile Management**: Update name, profile picture, and status
+
+## Technology Stack
+
+- **Frontend**: Next.js, React, TailwindCSS, Radix UI
+- **Backend**: Next.js API Routes
+- **Database**: PostgreSQL with Prisma ORM
+- **Real-time Communication**: Pusher
+- **Authentication**: NextAuth.js
+- **File Storage**: Cloudinary
+- **Voice/Video Calls**: Zego WebRTC
+- **Form Handling**: React Hook Form, Yup validation
+- **State Management**: Recoil, Zustand
+- **Styling**: TailwindCSS with Radix UI components
+
+## Getting Started
+
+### Installation
+
+1. Clone the repository:
 ```bash
-$ git clone https://github.com/FallenDeity/WhatsAppClone
-$ cd WhatsAppClone
-$ npm install
+git clone <repository-url>
+cd WhatsAppClone
 ```
 
-# Build
-
+2. Install dependencies:
 ```bash
-$ npm run build
+npm install
 ```
 
-Internally calls for next to build the project.
+3. Set up environment variables as described in [env-setup-guide.md](env-setup-guide.md)
 
-# Test
-
+4. Initialize the database:
 ```bash
-$ npm run test
+npm run db:setup
 ```
 
-Internally calls for mocha to run the tests.
-
-# Run
-
+5. Start the development server:
 ```bash
-$ npm run dev
+npm run dev
 ```
 
-Internally calls for next to run the project in development mode.
+### Running in Production
 
-# Others
+#### Windows:
+```bash
+.\build-and-start.bat
+```
 
-- `npm run lint` - Runs eslint on the project.
-- `npm run lint:fix` - Runs eslint on the project and fixes the errors.
-- `npm run prettier` - Runs prettier on the project.
-- `npm run prettier:fix` - Runs prettier on the project and fixes the errors.
+#### Unix/Linux/Mac:
+```bash
+./build-and-start.sh
+```
 
-> **Note**  
-> Few more commands are available in `package.json` under `scripts` section.
+## CRM Module Usage
+
+### Contact Management
+
+The CRM module provides a comprehensive view of your contacts:
+
+1. **Customer Information**: Store company details, position, website, etc.
+2. **Tagging System**: Categorize contacts with custom tags
+3. **Follow-up Management**: Schedule follow-ups with due dates and reminders
+4. **Contact Notes**: Add notes during conversations for future reference
+5. **Message Templates**: Create templates for common messages
+
+### Accessing CRM Features
+
+- Open any conversation
+- Click the "CRM" button in the chat header
+- A side panel will appear with CRM features organized in tabs
+
+## Deploying
+
+The application can be deployed to any platform that supports Next.js applications, such as Vercel, Netlify, or a custom server.
+
+### Vercel Deployment
+
+```bash
+npm install -g vercel
+vercel
+```
+
+### Custom Server Deployment
+
+1. Build the application:
+```bash
+npm run build
+```
+
+2. Start the production server:
+```bash
+npm run start
+```
+
+## Contributing
+
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute to this project.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

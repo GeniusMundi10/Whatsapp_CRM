@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
+import { User } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import getCurrentUser from "@/actions/getCurrentUser";
@@ -10,6 +11,11 @@ import { pusherServer } from "@/lib/pusher";
 
 interface IParams {
 	conversationId?: string;
+}
+
+interface ConversationWithUsers {
+	id: string;
+	users: Pick<User, "id" | "email" | "image" | "name" | "createdAt" | "updatedAt" | "lastSeen">[];
 }
 
 export async function DELETE(_: Request, { params }: { params: IParams }): Promise<NextResponse> {
@@ -21,7 +27,7 @@ export async function DELETE(_: Request, { params }: { params: IParams }): Promi
 			return NextResponse.json(null);
 		}
 
-		const existingConversation = await prisma.conversation.findUnique({
+		const existingConversation = (await prisma.conversation.findUnique({
 			where: {
 				id: conversationId,
 			},
@@ -35,12 +41,10 @@ export async function DELETE(_: Request, { params }: { params: IParams }): Promi
 						createdAt: true,
 						updatedAt: true,
 						lastSeen: true,
-						conversationIds: false,
-						seenMessageIds: false,
 					},
 				},
 			},
-		});
+		})) as ConversationWithUsers | null;
 
 		if (!existingConversation) {
 			return new NextResponse("Invalid ID", { status: 400 });
@@ -49,16 +53,22 @@ export async function DELETE(_: Request, { params }: { params: IParams }): Promi
 		const deletedConversation = await prisma.conversation.deleteMany({
 			where: {
 				id: conversationId,
-				userIds: {
-					hasSome: [currentUser.id],
+				users: {
+					some: {
+						id: currentUser.id,
+					},
 				},
 			},
 		});
-		existingConversation.users.map(async (user) => {
-			if (user.email) {
-				await pusherServer.trigger(user.email, "conversation:remove", existingConversation);
-			}
-		});
+
+		await Promise.all(
+			existingConversation.users.map(async (user) => {
+				if (user.email) {
+					await pusherServer.trigger(user.email, "conversation:remove", existingConversation);
+				}
+			})
+		);
+
 		return NextResponse.json(deletedConversation);
 	} catch (error) {
 		return NextResponse.json(null);

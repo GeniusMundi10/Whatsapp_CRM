@@ -7,12 +7,25 @@
 
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import bcrypt from "bcrypt";
-import NextAuth, { AuthOptions } from "next-auth";
+import NextAuth, { AuthOptions, Session } from "next-auth";
+import { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 
 import { prisma } from "@/lib/prisma";
+
+// Add custom type for session user
+declare module "next-auth" {
+	interface Session {
+		user: {
+			id: string;
+			name?: string | null;
+			email?: string | null;
+			image?: string | null;
+		};
+	}
+}
 
 export const authOptions: AuthOptions = {
 	adapter: PrismaAdapter(prisma),
@@ -56,6 +69,23 @@ export const authOptions: AuthOptions = {
 		strategy: "jwt",
 	},
 	secret: process.env.NEXTAUTH_SECRET,
+	pages: {
+		signIn: "/",
+	},
+	callbacks: {
+		async session({ session, token }): Promise<Session> {
+			if (token.sub && session.user) {
+				session.user.id = token.sub;
+			}
+			return session;
+		},
+		async jwt({ token, user }): Promise<JWT> {
+			if (user?.id) {
+				token.sub = user.id;
+			}
+			return token;
+		},
+	},
 };
 
 const handler = NextAuth(authOptions);

@@ -6,12 +6,12 @@ generator client {
 }
 
 datasource db {
-  provider = "mongodb"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  id              String @id @default(cuid())
   name            String?
   email           String?   @unique
   emailVerified   Boolean?  @default(true)
@@ -23,29 +23,34 @@ model User {
   updatedAt       DateTime @updatedAt
   lastSeen        DateTime? @default(now())
 
-  conversationIds String[] @db.ObjectId
-  conversations Conversation[] @relation(fields: [conversationIds], references: [id])
+  conversations Conversation[]
 
-  seenMessageIds String[] @db.ObjectId
-  seenMessages Message[] @relation("Seen", fields: [seenMessageIds], references: [id])
+  seenMessages Message[] @relation("Seen")
 
   accounts Account[]
   messages Message[]
+  
+  // CRM Relations
+  contactTags ContactTag[] // Tags created by this user
+  customerInfo CustomerInfo[] // Customer info created by this user
+  followUps FollowUp[] // Follow-ups created by this user
+  messageTemplates MessageTemplate[] // Message templates created by this user
+  contactNotes ContactNote[] // Notes created by this user
 }
 
 model Account {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-  userId             String   @db.ObjectId
+  id String @id @default(cuid())
+  userId             String
   type               String
   provider           String
   providerAccountId  String
-  refresh_token      String?  @db.String
+  refresh_token      String?  @db.Text
   refresh_token_expires_in Int?
-  access_token       String?  @db.String
+  access_token       String?  @db.Text
   expires_at         Int?
   token_type         String?
   scope              String?
-  id_token           String?  @db.String
+  id_token           String?  @db.Text
   session_state      String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -54,34 +59,128 @@ model Account {
 }
 
 model Conversation {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
   createdAt       DateTime @default(now())
   lastMessageAt DateTime @default(now())
   name String?
   isGroup Boolean?
   logo String?
 
-  messagesIds String[] @db.ObjectId
   messages Message[]
 
-  userIds String[] @db.ObjectId
-  users User[] @relation(fields: [userIds], references: [id])
+  users User[]
+  
+  // CRM Relations
+  customerInfo CustomerInfo? // One conversation can be associated with one customer
+  followUps FollowUp[] // Follow-ups related to this conversation
+  contactNotes ContactNote[] // Notes related to this conversation
 }
 
 model Message {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
+  id String @id @default(cuid())
   body String?
   image String?
   audio String?
   type String?
   createdAt DateTime @default(now())
 
-  seenIds String[] @db.ObjectId
-  seen User[] @relation("Seen", fields: [seenIds], references: [id])
+  seen User[] @relation("Seen")
 
-  conversationId String @db.ObjectId
+  conversationId String
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  senderId String @db.ObjectId
+  senderId String
   sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  
+  // CRM Relations
+  fromTemplate Boolean @default(false)
+  templateId String?
+  messageTemplate MessageTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+}
+
+// CRM Models
+
+model ContactTag {
+  id String @id @default(cuid())
+  name String
+  color String
+  createdAt DateTime @default(now())
+  
+  creatorId String
+  creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  customerInfos CustomerInfo[] // Many-to-many relation with CustomerInfo
+}
+
+model CustomerInfo {
+  id String @id @default(cuid())
+  company String?
+  position String?
+  notes String?
+  address String?
+  website String?
+  priority String? // "High", "Medium", "Low"
+  status String? // "Lead", "Customer", "Prospect", etc.
+  source String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  conversationId String @unique
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  creatorId String
+  creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  // Many-to-many relation with tags
+  tags ContactTag[]
+}
+
+model ContactNote {
+  id String @id @default(cuid())
+  content String
+  createdAt DateTime @default(now())
+  
+  conversationId String
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  creatorId String
+  creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+}
+
+model FollowUp {
+  id String @id @default(cuid())
+  title String
+  description String?
+  dueDate DateTime
+  priority String // "High", "Medium", "Low"
+  status String // "Pending", "Completed", "Overdue"
+  isRecurring Boolean @default(false)
+  recurrencePattern String? // "Daily", "Weekly", "Monthly"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  conversationId String
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  creatorId String
+  creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+}
+
+model MessageTemplate {
+  id String @id @default(cuid())
+  name String
+  content String
+  category String? // For organizing templates
+  variables String[] // Variables like {{name}}, {{company}}
+  usageCount Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  creatorId String
+  creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  messages Message[] // Messages created from this template
 }

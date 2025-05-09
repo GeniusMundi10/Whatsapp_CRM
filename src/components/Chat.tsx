@@ -12,6 +12,7 @@ import { useTheme } from "next-themes";
 import React from "react";
 import { toast, ToastContainer } from "react-toastify";
 import { useRecoilState } from "recoil";
+import dynamic from "next/dynamic";
 
 import getConversationById from "@/actions/getConversationbyId";
 import getCurrentUser from "@/actions/getCurrentUser";
@@ -23,12 +24,13 @@ import { FullConversationType, FullMessageType } from "@/lib/types";
 import { Call, callState } from "./atoms/CallState";
 import { conversationState } from "./atoms/conversationState";
 import { messageSearch } from "./atoms/messageSearch";
-import IncomingCall from "./Call/IncomingCall";
 import OutgoingCall from "./Call/OutgoingCall";
 import ChatContainer from "./Chat/ChatContainer";
 import ChatList from "./Chat/ChatList";
 import Empty from "./Chat/Empty";
 import SearchMessages from "./Chat/SearchMessages";
+
+const IncomingCall = dynamic(() => import("@/components/Call/IncomingCall"), { ssr: false });
 
 export default function Chat(): React.JSX.Element {
 	const [CallState, setCallState] = useRecoilState(callState);

@@ -12,11 +12,42 @@ export async function POST(request: Request): Promise<NextResponse> {
 			image: string;
 			conversationId: string;
 			audio: string;
+			templateId?: string;
 		};
-		const { message, image, conversationId, audio } = body;
+		const { message, image, conversationId, audio, templateId } = body;
 		if (!currentUser?.id || !currentUser.email) {
 			return new NextResponse("Unauthorized", { status: 401 });
 		}
+
+		const messageData: any = {
+			body: message,
+			image: image,
+			audio: audio,
+			conversation: {
+				connect: { id: conversationId },
+			},
+			sender: {
+				connect: { id: currentUser.id },
+			},
+			seen: {
+				connect: {
+					id: currentUser.id,
+				},
+			},
+		};
+
+		if (templateId) {
+			messageData.fromTemplate = true;
+			messageData.messageTemplate = {
+				connect: { id: templateId },
+			};
+
+			await prisma.messageTemplate.update({
+				where: { id: templateId },
+				data: { usageCount: { increment: 1 } },
+			});
+		}
+
 		const newMessage = await prisma.message.create({
 			include: {
 				seen: {
@@ -45,23 +76,9 @@ export async function POST(request: Request): Promise<NextResponse> {
 						seenMessageIds: false,
 					},
 				},
+				messageTemplate: true,
 			},
-			data: {
-				body: message,
-				image: image,
-				audio: audio,
-				conversation: {
-					connect: { id: conversationId },
-				},
-				sender: {
-					connect: { id: currentUser.id },
-				},
-				seen: {
-					connect: {
-						id: currentUser.id,
-					},
-				},
-			},
+			data: messageData,
 		});
 		const updateConversation = await prisma.conversation.update({
 			where: {
@@ -117,6 +134,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 								seenMessageIds: false,
 							},
 						},
+						messageTemplate: true,
 					},
 				},
 			},

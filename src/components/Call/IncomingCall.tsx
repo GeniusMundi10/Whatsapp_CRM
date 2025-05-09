@@ -9,8 +9,8 @@ import { MdCall, MdCallEnd } from "react-icons/md";
 import { BeatLoader } from "react-spinners";
 import { toast } from "react-toastify";
 import { useRecoilState } from "recoil";
-import { ZegoExpressEngine } from "zego-express-engine-webrtc";
-import { ZegoStreamList } from "zego-express-engine-webrtc/sdk/code/zh/ZegoExpressEntity.web";
+import type { ZegoExpressEngine } from "zego-express-engine-webrtc";
+import type { ZegoStreamList } from "zego-express-engine-webrtc/sdk/code/zh/ZegoExpressEntity.web";
 
 import { pusherClient } from "@/lib/pusher";
 import getZegoToken from "@/lib/token";
@@ -77,56 +77,61 @@ export default function IncomingCall({
 	}, [callAccepted]);
 	React.useEffect((): void => {
 		if (callAccepted) {
-			const _zg = new ZegoExpressEngine(
-				parseInt(process.env.NEXT_PUBLIC_ZEGOCLOUD_APP_ID ?? ""),
-				process.env.NEXT_PUBLIC_ZEGOCLOUD_SERVER_SECRET ?? ""
-			);
-			_zg.setDebugVerbose(false);
-			// eslint-disable-next-line @typescript-eslint/no-misused-promises
-			void _zg.on("roomStreamUpdate", async (roomID, updateType, streamList: ZegoStreamList[]): Promise<void> => {
-				console.log("roomUserUpdate roomID ", roomID, streamList);
-				if (updateType === "ADD") {
-					const streamID = streamList[0].streamID;
-					const remoteStream = await _zg.startPlayingStream(streamID);
-					const remoteView = _zg.createRemoteStreamView(remoteStream);
-					setRemoteStream(remoteStream);
-					remoteView.play("remote-video", { enableAutoplayDialog: true });
-					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-				} else if (updateType === "DELETE") {
-					_zg.stopPlayingStream(streamList[0].streamID);
-				}
-			});
-			const token = getZegoToken(user.id);
-			setZg(_zg);
-			void _zg
-				.loginRoom(
-					String(call.roomID),
-					token,
-					{ userID: user.id, userName: user.name ?? "" },
-					{ userUpdate: true }
-				)
-				.then(async (result) => {
-					if (result) {
-						const localStream = await _zg.createStream({
-							camera: {
-								audio: true,
-								video: call.type === "video",
-								videoQuality: 3,
-								ANS: true,
-								AGC: true,
-								AEC: true,
-							},
-						});
-						const localView = _zg.createLocalStreamView(localStream);
-						localView.play(call.type === "video" ? "local-video" : "local-audio", {
-							enableAutoplayDialog: true,
-						});
-						const streamID = new Date().getTime().toString();
-						setLocalStream(localStream);
-						setStreamID(streamID);
-						_zg.startPublishingStream(streamID, localStream);
+			import('zego-express-engine-webrtc').then(({ ZegoExpressEngine }) => {
+				const _zg = new ZegoExpressEngine(
+					parseInt(process.env.NEXT_PUBLIC_ZEGOCLOUD_APP_ID ?? ""),
+					process.env.NEXT_PUBLIC_ZEGOCLOUD_SERVER_SECRET ?? ""
+				);
+				_zg.setDebugVerbose(false);
+				// eslint-disable-next-line @typescript-eslint/no-misused-promises
+				void _zg.on("roomStreamUpdate", async (roomID, updateType, streamList: ZegoStreamList[]): Promise<void> => {
+					console.log("roomUserUpdate roomID ", roomID, streamList);
+					if (updateType === "ADD") {
+						const streamID = streamList[0].streamID;
+						const remoteStream = await _zg.startPlayingStream(streamID);
+						const remoteView = _zg.createRemoteStreamView(remoteStream);
+						setRemoteStream(remoteStream);
+						remoteView.play("remote-video", { enableAutoplayDialog: true });
+						// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+					} else if (updateType === "DELETE") {
+						_zg.stopPlayingStream(streamList[0].streamID);
 					}
 				});
+				const token = getZegoToken(user.id);
+				setZg(_zg);
+				void _zg
+					.loginRoom(
+						String(call.roomID),
+						token,
+						{ userID: user.id, userName: user.name ?? "" },
+						{ userUpdate: true }
+					)
+					.then(async (result) => {
+						if (result) {
+							const localStream = await _zg.createStream({
+								camera: {
+									audio: true,
+									video: call.type === "video",
+									videoQuality: 3,
+									ANS: true,
+									AGC: true,
+									AEC: true,
+								},
+							});
+							const localView = _zg.createLocalStreamView(localStream);
+							localView.play(call.type === "video" ? "local-video" : "local-audio", {
+								enableAutoplayDialog: true,
+							});
+							const streamID = new Date().getTime().toString();
+							setLocalStream(localStream);
+							setStreamID(streamID);
+							_zg.startPublishingStream(streamID, localStream);
+						}
+					});
+			}).catch(err => {
+				console.error("Error importing ZegoExpressEngine:", err);
+				toast.error("Failed to initialize call engine");
+			});
 		}
 	}, [callAccepted]);
 	React.useEffect(() => {

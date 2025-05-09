@@ -13,7 +13,7 @@ export default async function handler(
 ): Promise<NextApiResponse<void>> {
 	const session = await getServerSession(request, response, authOptions);
 
-	if (!session?.user?.email) {
+	if (!session?.user.email) {
 		return response.status(401);
 	}
 

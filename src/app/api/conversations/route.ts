@@ -1,4 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
@@ -8,17 +11,27 @@ import getCurrentUser from "@/actions/getCurrentUser";
 import { prisma } from "@/lib/prisma";
 import { pusherServer } from "@/lib/pusher";
 
+interface RequestBody {
+	userId: string;
+	isGroup?: boolean;
+	members?: string[];
+	name?: string;
+}
+
 export async function POST(request: Request): Promise<NextResponse> {
 	try {
 		const currentUser = await getCurrentUser();
-		const body = await request.json();
-		const { userId, isGroup, members, name, logo } = body;
-		if (!currentUser?.id || !currentUser.email) {
-			return new NextResponse("Unauthorized", { status: 400 });
+		const body = (await request.json()) as RequestBody;
+		const { userId, isGroup, members, name } = body;
+
+		if (!currentUser?.id || !currentUser?.email) {
+			return new NextResponse("Unauthorized", { status: 401 });
 		}
+
 		if (isGroup && (!members || members.length < 2 || !name)) {
 			return new NextResponse("Invalid data", { status: 400 });
 		}
+
 		if (isGroup) {
 			const newConversation = await prisma.conversation.create({
 				data: {
@@ -26,58 +39,57 @@ export async function POST(request: Request): Promise<NextResponse> {
 					isGroup,
 					users: {
 						connect: [
-							...members.map((member: { value: string }) => ({
-								id: member.value,
+							...members!.map((member: string) => ({
+								id: member,
 							})),
 							{
 								id: currentUser.id,
 							},
 						],
 					},
-					logo,
 				},
 				include: {
-					users: {
-						select: {
-							id: true,
-							email: true,
-							image: true,
-							name: true,
-							createdAt: true,
-							updatedAt: true,
-							lastSeen: true,
-							conversationIds: false,
-							seenMessageIds: false,
-						},
-					},
+					users: true,
 				},
 			});
-			newConversation.users.map(async (user): Promise<void> => {
+
+			// Update all connections with new conversation
+			newConversation.users.forEach((user) => {
 				if (user.email) {
-					await pusherServer.trigger(user.email, "conversation:new", newConversation);
+					pusherServer.trigger(user.email, "conversation:new", newConversation);
 				}
 			});
+
 			return NextResponse.json(newConversation);
 		}
+
 		const existingConversations = await prisma.conversation.findMany({
 			where: {
 				OR: [
 					{
-						userIds: {
-							equals: [currentUser.id, userId],
+						users: {
+							some: {
+								id: currentUser.id,
+							},
 						},
 					},
 					{
-						userIds: {
-							equals: [userId, currentUser.id],
+						users: {
+							some: {
+								id: userId,
+							},
 						},
 					},
 				],
 			},
 		});
-		if (existingConversations.length > 0) {
-			return NextResponse.json(existingConversations[0]);
+
+		const singleConversation = existingConversations[0];
+
+		if (singleConversation) {
+			return NextResponse.json(singleConversation);
 		}
+
 		const newConversation = await prisma.conversation.create({
 			data: {
 				users: {
@@ -92,26 +104,17 @@ export async function POST(request: Request): Promise<NextResponse> {
 				},
 			},
 			include: {
-				users: {
-					select: {
-						id: true,
-						email: true,
-						image: true,
-						name: true,
-						createdAt: true,
-						updatedAt: true,
-						lastSeen: true,
-						conversationIds: false,
-						seenMessageIds: false,
-					},
-				},
+				users: true,
 			},
 		});
-		newConversation.users.map(async (user): Promise<void> => {
+
+		// Update all connections with new conversation
+		newConversation.users.map((user) => {
 			if (user.email) {
-				await pusherServer.trigger(user.email, "conversation:new", newConversation);
+				pusherServer.trigger(user.email, "conversation:new", newConversation);
 			}
 		});
+
 		return NextResponse.json(newConversation);
 	} catch (error) {
 		return new NextResponse("Internal Error", { status: 500 });

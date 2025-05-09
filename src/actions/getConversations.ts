@@ -21,8 +21,10 @@ const getConversations = async (): Promise<FullConversationType[]> => {
 				lastMessageAt: "desc",
 			},
 			where: {
-				userIds: {
-					has: currentUser.id,
+				users: {
+					some: {
+						id: currentUser.id,
+					},
 				},
 			},
 			include: {
